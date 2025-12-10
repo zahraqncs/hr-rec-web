@@ -1,0 +1,6 @@
+flask
+pandas
+openpyxl
+python-dateutil
+python-docx
+werkzeug
