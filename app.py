@@ -811,6 +811,14 @@ SCREENING_HTML = """
     <div class="col">
   <label>DOB</label>
   <input type="date" name="DOB" value="{{ form.get('DOB','') }}" {% if is_req %}disabled{% endif %}>
+  <label>Age</label>
+<input type="number" id="ageField" name="Age" 
+       value="{{ form.get('Age','') }}" 
+       placeholder="Auto">
+
+<button type="button" id="calcAgeBtn" style="margin-top:5px;">Calculate Age</button>
+
+
 </div>
 
     <div class="col"><label>Marital Status</label>
@@ -951,14 +959,44 @@ SCREENING_HTML = """
     }
   }
 
-  document.addEventListener('DOMContentLoaded', function () {
-    var ms = document.querySelector('select[name="Marital Status"]');
-    if (ms) {
-      ms.addEventListener('change', toggleFamilyStatus);
-      toggleFamilyStatus();
+// =============================
+// AGE AUTO CALC + BUTTON CALC
+// =============================
+document.addEventListener('DOMContentLoaded', function () {
+
+    const dobInput = document.querySelector('input[name="DOB"]');
+    const ageField = document.getElementById('ageField');
+    const calcBtn = document.getElementById('calcAgeBtn');
+
+    function calcAge() {
+        if (!dobInput || !dobInput.value) return;
+        const dob = new Date(dobInput.value);
+        const today = new Date();
+
+        let age = today.getFullYear() - dob.getFullYear();
+        const month = today.getMonth() - dob.getMonth();
+
+        if (month < 0 || (month === 0 && today.getDate() < dob.getDate())) {
+            age--;
+        }
+
+        if (age >= 0) {
+            ageField.value = age;
+        }
     }
-    toggleNatOther();
-  });
+
+    // Auto calc when DOB changes
+    if (dobInput) {
+        dobInput.addEventListener('change', calcAge);
+    }
+
+    // Manual button calc
+    if (calcBtn) {
+        calcBtn.addEventListener('click', calcAge);
+    }
+});
+
+
 </script>
 {% endblock %}
 """
@@ -1830,7 +1868,8 @@ def screening_import():
         "Nationality","Iqama Status","Profession in Iqama",
         "Current Compensation","Expected Compensation","Notice Period",
         "Ever Interviewed by the client before? (Yes/No)","Recorded By",
-        "Gov ID / Iqama / Passport #","CV File Path","Requestor Username"
+        "Gov ID / Iqama / Passport #","CV File Path","Requestor Username","Age"
+
     }
     if sf.empty: sf = pd.DataFrame(columns=sorted(list(required_cols)))
     srow = {"Timestamp": pd.Timestamp.now(), "Candidate ID": cand_id, "CV File Path": ""}
@@ -1940,6 +1979,9 @@ def screening_save():
         "Ever Interviewed by the client before? (Yes/No)","Recorded By","Gov ID / Iqama / Passport #",
         "Requestor Username"
     ]}
+    # AGE FIELD (Manual or Auto From UI)
+    norm["Age"] = _norm(form.get("Age"))
+
     
     # Force-clean Gov ID (remove Excel float .0)
     gid = norm.get("Gov ID / Iqama / Passport #", "")
@@ -1968,7 +2010,8 @@ def screening_save():
         "Nationality","Iqama Status","Profession in Iqama",
         "Current Compensation","Expected Compensation","Notice Period",
         "Ever Interviewed by the client before? (Yes/No)","Recorded By",
-        "Gov ID / Iqama / Passport #","CV File Path","Requestor Username"
+        "Gov ID / Iqama / Passport #","CV File Path","Requestor Username","Age"
+
     }
 
     if sf.empty:
