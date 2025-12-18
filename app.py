@@ -289,7 +289,38 @@ def _generate_word_spec(cand_id: str, cand_name: str, data: Dict[str,Any]) -> st
 
     # Load template (or fallback)
     doc = Document(template_path) if os.path.exists(template_path) else Document()
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
 
+
+    def force_times_new_roman(doc):
+        styles = doc.styles
+
+        for style_name in ["Normal", "Table Normal"]:
+            try:
+                style = styles[style_name]
+            except KeyError:
+                continue
+
+            font = style.font
+            font.name = "Times New Roman"
+            font.size = Pt(10)
+
+            rFonts = style._element.rPr.rFonts
+            rFonts.set(qn("w:ascii"), "Times New Roman")
+            rFonts.set(qn("w:hAnsi"), "Times New Roman")
+            rFonts.set(qn("w:eastAsia"), "Times New Roman")
+            rFonts.set(qn("w:cs"), "Times New Roman")
+
+    doc = Document(template_path) if os.path.exists(template_path) else Document()
+
+    force_times_new_roman(doc)
+
+
+
+    # -------------------------------------
+
+    
     # Candidate folder
     cdir = candidate_root(cand_name, cand_id)
     ensure_dirs(cdir)
@@ -827,25 +858,26 @@ SCREENING_HTML = """
         {% for o in MARITAL %}<option value="{{o}}" {% if form.get('Marital Status','')==o %}selected{% endif %}>{{o}}</option>{% endfor %}
       </select>
     </div>
-    <div class="col" id="family-status-wrapper" style="display:none;">
- <label>Family Status (if Married)</label>
-<select name="Family Status (if Married)" {% if is_req %}disabled{% endif %}>
-  <option value=""></option>
-  <option value="Without Family"
-    {% if form.get('Family Status (if Married)','') == 'Without Family' %}selected{% endif %}>
-    Without Family
-  </option>
-  <option value="With Family - Iqama"
-    {% if form.get('Family Status (if Married)','') == 'With Family - Iqama' %}selected{% endif %}>
-    With Family - Iqama
-  </option>
-  <option value="With Family - Visit Visa"
-    {% if form.get('Family Status (if Married)','') == 'With Family - Visit Visa' %}selected{% endif %}>
-    With Family - Visit Visa
-  </option>
-</select>
+   <div class="col" id="family-status-wrapper" style="display:none;">
+  <label>Family Status (If Married)</label>
+  <select name="Family Status (if Married)" {% if is_req %}disabled{% endif %}>
+    <option value=""></option>
+    <option value="Residential (Iqama)"
+      {% if form.get('Family Status (if Married)','') == 'Residential (Iqama)' %}selected{% endif %}>
+      Residential (Iqama)
+    </option>
+    <option value="Visit Visa"
+      {% if form.get('Family Status (if Married)','') == 'Visit Visa' %}selected{% endif %}>
+      Visit Visa
+    </option>
+    <option value="N/A"
+      {% if form.get('Family Status (if Married)','') == 'N/A' %}selected{% endif %}>
+      N/A
+    </option>
+  </select>
+</div>
 
-    </div>
+
   </div>
 
   <div class="row">
@@ -994,6 +1026,13 @@ document.addEventListener('DOMContentLoaded', function () {
     if (calcBtn) {
         calcBtn.addEventListener('click', calcAge);
     }
+});
+document.addEventListener('DOMContentLoaded', function () {
+  const ms = document.querySelector('select[name="Marital Status"]');
+  if (ms) {
+    ms.addEventListener('change', toggleFamilyStatus);
+    toggleFamilyStatus(); // 🔥 auto-apply on load
+  }
 });
 
 
